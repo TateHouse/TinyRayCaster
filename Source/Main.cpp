@@ -1,19 +1,24 @@
-unsigned int packColor(const unsigned char red,
-                       const unsigned char green,
-                       const unsigned char blue,
-                       const unsigned char alpha = 255) {
-	return (alpha << 24) + (blue << 16) + (green << 8) + red;
+#include <cstddef>
+
+unsigned int packColor(const std::byte red,
+                       const std::byte green,
+                       const std::byte blue,
+                       const std::byte alpha) {
+	return (static_cast<unsigned int>(red) << 0) +
+	       (static_cast<unsigned int>(green) << 8) +
+	       (static_cast<unsigned int>(blue) << 16) +
+	       (static_cast<unsigned int>(alpha) << 24);
 }
 
 void unpackColor(const unsigned int color,
-                 unsigned char& red,
-                 unsigned char& green,
-                 unsigned char& blue,
-                 unsigned char& alpha) {
-	red = (color >> 0) & 255;
-	green = (color >> 8) & 255;
-	blue = (color >> 16) & 255;
-	alpha = (color >> 24) & 255;
+                 std::byte& red,
+                 std::byte& green,
+                 std::byte& blue,
+                 std::byte& alpha) {
+	red = static_cast<std::byte>((color >> 0) & 255);
+	green = static_cast<std::byte>((color >> 8) & 255);
+	blue = static_cast<std::byte>((color >> 16) & 255);
+	alpha = static_cast<std::byte>((color >> 24) & 255);
 }
 
 int main(int argc, char* argv[]) {
