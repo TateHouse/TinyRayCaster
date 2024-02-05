@@ -99,6 +99,7 @@ int main(int argc, char* argv[]) {
 	
 	auto playerX {3.456f};
 	auto playerY {2.345f};
+	auto playerViewAngle {1.523f};
 	
 	for (std::size_t y {0}; y < imageHeight; ++y) {
 		for (std::size_t x {0}; x < imageWidth; ++x) {
@@ -142,6 +143,22 @@ int main(int argc, char* argv[]) {
 	              5,
 	              5,
 	              packColor(std::byte {255}, std::byte {255}, std::byte {255}, std::byte {255}));
+	
+	constexpr auto maxRayDistance {20.0f};
+	for (auto rayDistance {0.0f}; rayDistance < maxRayDistance; rayDistance += 0.05) {
+		const auto rayX {playerX + rayDistance * std::cos(playerViewAngle)};
+		const auto rayY {playerY + rayDistance * std::sin(playerViewAngle)};
+		const auto mapIndex {static_cast<int>(rayY) * mapWidth + static_cast<int>(rayX)};
+		if (map[mapIndex] != ' ') {
+			break;
+		}
+		
+		const auto rayScreenX {rayX * rectangleWidth};
+		const auto rayScreenY {rayY * rectangleHeight};
+		const auto imageIndex {static_cast<int>(rayScreenY) * imageWidth + static_cast<int>(rayScreenX)};
+		image[imageIndex] = packColor(std::byte {255}, std::byte {255}, std::byte {255});
+	}
+	
 	writeImage(imagePath, image, imageWidth, imageHeight);
 	
 	return 0;
