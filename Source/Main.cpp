@@ -97,6 +97,9 @@ int main(int argc, char* argv[]) {
             "0002222222200000"
 	};
 	
+	auto playerX {3.456f};
+	auto playerY {2.345f};
+	
 	for (std::size_t y {0}; y < imageHeight; ++y) {
 		for (std::size_t x {0}; x < imageWidth; ++x) {
 			const auto red {static_cast<std::byte>(x)};
@@ -129,6 +132,16 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	
+	const auto playerMapX {static_cast<unsigned int>(playerX * rectangleWidth)};
+	const auto playerMapY {static_cast<unsigned int>(playerY * rectangleHeight)};
+	drawRectangle(image,
+	              imageWidth,
+	              imageHeight,
+	              playerMapX,
+	              playerMapY,
+	              5,
+	              5,
+	              packColor(std::byte {255}, std::byte {255}, std::byte {255}, std::byte {255}));
 	writeImage(imagePath, image, imageWidth, imageHeight);
 	
 	return 0;
