@@ -1,0 +1,12 @@
+# JetBrains Idea Folder
+.idea/
+
+# CMake
+cmake-build-*/
+[Bb]uild/
+
+# File-based project format
+*.iws
+
+# Output
+Output/
