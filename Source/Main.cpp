@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 #include <numbers>
 #include <vector>
 
@@ -65,18 +66,35 @@ void drawRectangle(std::vector<unsigned int>& image,
 			const auto pixelX {xPosition + xIndex};
 			const auto pixelY {yPosition + yIndex};
 			
-			if (pixelX < imageWidth && pixelY < imageHeight) {
-				image[pixelY * imageWidth + pixelX] = color;
+			if (pixelX >= imageWidth || pixelY >= imageHeight) {
+				continue;
 			}
+			
+			const auto pixelIndex {pixelY * imageWidth + pixelX};
+			image[pixelIndex] = color;
+		}
+	}
+}
+
+[[maybe_unused]] void drawGradientBackground(const unsigned int imageWidth,
+                                             const unsigned int imageHeight,
+                                             std::vector<unsigned int>& image) {
+	for (size_t y {0}; y < imageHeight; ++y) {
+		for (size_t x {0}; x < imageWidth; ++x) {
+			const auto red {static_cast<std::byte>(255 * (y / static_cast<float>(imageHeight)))};
+			const auto green {static_cast<std::byte>(255 * (x / static_cast<float>(imageWidth)))};
+			const std::byte blue {0};
+			image[y * imageWidth + x] = packColor(red, green, blue);
 		}
 	}
 }
 
 int main(int argc, char* argv[]) {
 	const std::filesystem::path imagePath {"Output/Image.ppm"};
-	const auto imageWidth {512u};
+	const auto imageWidth {1024u};
 	const auto imageHeight {512u};
-	std::vector<unsigned int> image(imageWidth * imageHeight);
+	std::vector<unsigned int> image(imageWidth * imageHeight,
+	                                packColor(std::byte {255}, std::byte {255}, std::byte {255}));
 	const auto mapWidth {16u};
 	const auto mapHeight {16u};
 	constexpr std::array<char, (mapWidth * mapHeight) + 1> map {
@@ -102,23 +120,12 @@ int main(int argc, char* argv[]) {
 	auto playerY {2.345f};
 	auto playerViewAngle {1.523f};
 	const auto playerFOV {static_cast<float>(std::numbers::pi) / 3.0f};
-	
-	for (std::size_t y {0}; y < imageHeight; ++y) {
-		for (std::size_t x {0}; x < imageWidth; ++x) {
-			const auto red {static_cast<std::byte>(255 * (y / static_cast<float>(imageHeight)))};
-			const auto green {static_cast<std::byte>(255 * (x / static_cast<float>(imageWidth)))};
-			const std::byte blue {0};
-			image[y * imageWidth + x] = packColor(red, green, blue);
-		}
-	}
-	
-	const auto rectangleWidth {imageWidth / mapWidth};
+	const auto rectangleWidth {imageWidth / (mapWidth * 2)};
 	const auto rectangleHeight {imageHeight / mapHeight};
 	
 	for (std::size_t yIndex {0}; yIndex < mapHeight; ++yIndex) {
 		for (std::size_t xIndex {0}; xIndex < mapWidth; ++xIndex) {
-			const auto mapIndex {yIndex * mapWidth + xIndex};
-			if (map[mapIndex] == ' ') {
+			if (const auto mapIndex {yIndex * mapWidth + xIndex}; map[mapIndex] == ' ') {
 				continue;
 			}
 			
@@ -146,26 +153,33 @@ int main(int argc, char* argv[]) {
 	              5,
 	              packColor(std::byte {255}, std::byte {255}, std::byte {255}, std::byte {255}));
 	
-	for (std::size_t rayIndex {0}; rayIndex < imageWidth; ++rayIndex) {
-		const auto startingAngle {playerViewAngle - (playerFOV / 2.0f)};
-		const auto rayIndexNormalized {static_cast<float>(rayIndex) / static_cast<float>(imageWidth)};
-		const auto rayAngle {startingAngle + (playerFOV * rayIndexNormalized)};
+	for (auto index {0}; index < imageWidth / 2; ++index) {
+		const auto startingAngle {playerViewAngle - playerFOV / 2.0f};
+		const auto rayIndexNormalized {static_cast<float>(index) / static_cast<float>(imageWidth / 2)};
+		const auto rayAngle {startingAngle + playerFOV * rayIndexNormalized};
 		constexpr auto maxRayDistance {20.0f};
 		
-		for (auto rayDistance {0.0f}; rayDistance < maxRayDistance; rayDistance += 0.05) {
+		for (auto rayDistance {0.0f}; rayDistance < maxRayDistance; rayDistance += 0.05f) {
 			const auto rayX {playerX + rayDistance * std::cos(rayAngle)};
 			const auto rayY {playerY + rayDistance * std::sin(rayAngle)};
+			const auto rayScreenX {static_cast<unsigned int>(rayX * rectangleWidth)};
+			const auto rayScreenY {static_cast<unsigned int>(rayY * rectangleHeight)};
+			const auto imageIndex {static_cast<int>(rayScreenY * imageWidth + rayScreenX)};
+			image[imageIndex] = packColor(std::byte {160}, std::byte {160}, std::byte {160});
+			
 			const auto mapIndex {static_cast<int>(rayY) * mapWidth + static_cast<int>(rayX)};
 			if (map[mapIndex] != ' ') {
+				const auto columnHeight {static_cast<unsigned int>(imageHeight / rayDistance)};
+				drawRectangle(image,
+				              imageWidth,
+				              imageHeight,
+				              (imageWidth / 2) + index,
+				              (imageHeight / 2) - (columnHeight / 2),
+				              1,
+				              columnHeight, packColor(std::byte {0}, std::byte {255}, std::byte {255}));
 				break;
 			}
-			
-			const auto rayScreenX {rayX * rectangleWidth};
-			const auto rayScreenY {rayY * rectangleHeight};
-			const auto imageIndex {static_cast<int>(rayScreenY) * imageWidth + static_cast<int>(rayScreenX)};
-			image[imageIndex] = packColor(std::byte {255}, std::byte {255}, std::byte {255});
 		}
-		
 	}
 	
 	writeImage(imagePath, image, imageWidth, imageHeight);
