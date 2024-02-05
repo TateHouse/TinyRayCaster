@@ -47,5 +47,22 @@ void writeImage(const std::filesystem::path& path,
 }
 
 int main(int argc, char* argv[]) {
+	const std::filesystem::path imagePath {"Output/Image.ppm"};
+	const unsigned int imageWidth {256};
+	const unsigned int imageHeight {256};
+	std::vector<unsigned int> image(imageWidth * imageHeight);
+	
+	for (std::size_t y {0}; y < imageHeight; ++y) {
+		for (std::size_t x {0}; x < imageWidth; ++x) {
+			const auto red {static_cast<std::byte>(x)};
+			const auto green {static_cast<std::byte>(y)};
+			const auto blue {static_cast<std::byte>(0)};
+			const auto alpha {static_cast<std::byte>(255)};
+			image[y * imageWidth + x] = packColor(red, green, blue, alpha);
+		}
+	}
+	
+	writeImage(imagePath, image, imageWidth, imageHeight);
+	
 	return 0;
 }
