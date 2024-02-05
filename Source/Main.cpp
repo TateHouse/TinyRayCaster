@@ -7,7 +7,7 @@
 unsigned int packColor(const std::byte red,
                        const std::byte green,
                        const std::byte blue,
-                       const std::byte alpha) {
+                       const std::byte alpha = std::byte {255}) {
 	return (static_cast<unsigned int>(red) << 0) +
 	       (static_cast<unsigned int>(green) << 8) +
 	       (static_cast<unsigned int>(blue) << 16) +
@@ -102,8 +102,7 @@ int main(int argc, char* argv[]) {
 			const auto red {static_cast<std::byte>(x)};
 			const auto green {static_cast<std::byte>(y)};
 			const auto blue {static_cast<std::byte>(0)};
-			const auto alpha {static_cast<std::byte>(255)};
-			image[y * imageWidth + x] = packColor(red, green, blue, alpha);
+			image[y * imageWidth + x] = packColor(red, green, blue);
 		}
 	}
 	
