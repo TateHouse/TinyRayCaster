@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <fstream>
 #include <filesystem>
@@ -46,11 +47,55 @@ void writeImage(const std::filesystem::path& path,
 	fileStream.close();
 }
 
+void drawRectangle(std::vector<unsigned int>& image,
+                   const unsigned int imageWidth,
+                   const unsigned int imageHeight,
+                   const unsigned int xPosition,
+                   const unsigned int yPosition,
+                   const unsigned int rectangleWidth,
+                   const unsigned int rectangleHeight,
+                   const unsigned int color) {
+	if (image.size() != imageWidth * imageHeight) {
+		throw std::invalid_argument("Image size does not match width and height");
+	}
+	
+	for (std::size_t xIndex {0}; xIndex < rectangleWidth; ++xIndex) {
+		for (std::size_t yIndex {0}; yIndex < rectangleHeight; ++yIndex) {
+			const auto pixelX {xPosition + xIndex};
+			const auto pixelY {yPosition + yIndex};
+			
+			if (pixelX < imageWidth && pixelY < imageHeight) {
+				image[pixelY * imageWidth + pixelX] = color;
+			}
+		}
+	}
+}
+
 int main(int argc, char* argv[]) {
 	const std::filesystem::path imagePath {"Output/Image.ppm"};
-	const unsigned int imageWidth {256};
-	const unsigned int imageHeight {256};
+	const auto imageWidth {256u};
+	const auto imageHeight {256u};
 	std::vector<unsigned int> image(imageWidth * imageHeight);
+	const auto mapWidth {16u};
+	const auto mapHeight {16u};
+	constexpr std::array<char, (mapWidth * mapHeight) + 1> map {
+			"0000222222220000"\
+            "1              0"\
+            "1      11111   0"\
+            "1     0        0"\
+            "0     0  1110000"\
+            "0     3        0"\
+            "0   10000      0"\
+            "0   0   11100  0"\
+            "0   0   0      0"\
+            "0   0   1  00000"\
+            "0       1      0"\
+            "2       1      0"\
+            "0       0      0"\
+            "0 0000000      0"\
+            "0              0"\
+            "0002222222200000"
+	};
 	
 	for (std::size_t y {0}; y < imageHeight; ++y) {
 		for (std::size_t x {0}; x < imageWidth; ++x) {
@@ -59,6 +104,29 @@ int main(int argc, char* argv[]) {
 			const auto blue {static_cast<std::byte>(0)};
 			const auto alpha {static_cast<std::byte>(255)};
 			image[y * imageWidth + x] = packColor(red, green, blue, alpha);
+		}
+	}
+	
+	const auto rectangleWidth {imageWidth / mapWidth};
+	const auto rectangleHeight {imageHeight / mapHeight};
+	
+	for (std::size_t yIndex {0}; yIndex < mapHeight; ++yIndex) {
+		for (std::size_t xIndex {0}; xIndex < mapWidth; ++xIndex) {
+			const auto mapIndex {yIndex * mapWidth + xIndex};
+			if (map[mapIndex] == ' ') {
+				continue;
+			}
+			
+			const auto xPosition {static_cast<unsigned int>(xIndex * rectangleWidth)};
+			const auto yPosition {static_cast<unsigned int>(yIndex * rectangleHeight)};
+			drawRectangle(image,
+			              imageWidth,
+			              imageHeight,
+			              xPosition,
+			              yPosition,
+			              rectangleWidth,
+			              rectangleHeight,
+			              packColor(std::byte {0}, std::byte {255}, std::byte {255}, std::byte {255}));
 		}
 	}
 	
