@@ -150,9 +150,9 @@ int main(int argc, char* argv[]) {
             "0     0  1110000"\
             "0     3        0"\
             "0   10000      0"\
-            "0   0   11100  0"\
-            "0   0   0      0"\
-            "0   0   1  00000"\
+            "0   3   11100  0"\
+            "5   4   0      0"\
+            "5   4   1  00000"\
             "0       1      0"\
             "2       1      0"\
             "0       0      0"\
@@ -167,17 +167,8 @@ int main(int argc, char* argv[]) {
 	const auto playerFOV {static_cast<float>(std::numbers::pi) / 3.0f};
 	const auto rectangleWidth {imageWidth / (mapWidth * 2)};
 	const auto rectangleHeight {imageHeight / mapHeight};
-	constexpr auto colorCount {16};
-	std::vector<unsigned int> colors(colorCount);
 	std::random_device randomDevice;
 	std::mt19937 randomEngine(randomDevice());
-	
-	for (std::size_t colorIndex {0}; colorIndex < colors.size(); ++colorIndex) {
-		const auto red {static_cast<std::byte>(randomEngine() % 255)};
-		const auto green {static_cast<std::byte>(randomEngine() % 255)};
-		const auto blue {static_cast<std::byte>(randomEngine() % 255)};
-		colors[colorIndex] = packColor(red, green, blue);
-	}
 	
 	std::vector<unsigned int> wallTextures {};
 	unsigned int textureSize {};
@@ -213,7 +204,8 @@ int main(int argc, char* argv[]) {
 				
 				const auto xPosition {static_cast<unsigned int>(xIndex * rectangleWidth)};
 				const auto yPosition {static_cast<unsigned int>(yIndex * rectangleHeight)};
-				const auto colorIndex {map[mapIndex] - '0'};
+				const auto textureId {map[mapIndex] - '0'};
+				const auto textureIndex {textureId * textureSize};
 				drawRectangle(image,
 				              imageWidth,
 				              imageHeight,
@@ -221,7 +213,7 @@ int main(int argc, char* argv[]) {
 				              yPosition,
 				              rectangleWidth,
 				              rectangleHeight,
-				              colors[colorIndex]);
+				              wallTextures[textureIndex]);
 			}
 		}
 		
@@ -244,7 +236,8 @@ int main(int argc, char* argv[]) {
 					const auto columnHeight {static_cast<unsigned int>(imageHeight /
 					                                                   (rayDistance *
 					                                                    std::cos(rayAngle - playerViewAngle)))};
-					const auto colorIndex {map[mapIndex] - '0'};
+					const auto textureId {map[mapIndex] - '0'};
+					const auto textureIndex {textureId * textureSize};
 					drawRectangle(image,
 					              imageWidth,
 					              imageHeight,
@@ -252,7 +245,7 @@ int main(int argc, char* argv[]) {
 					              (imageHeight / 2) - (columnHeight / 2),
 					              1,
 					              columnHeight,
-					              colors[colorIndex]);
+					              wallTextures[textureIndex]);
 					break;
 				}
 			}
@@ -262,7 +255,8 @@ int main(int argc, char* argv[]) {
 		for (std::size_t textureCoordinateX {0}; textureCoordinateX < textureSize; ++textureCoordinateX) {
 			for (std::size_t textureCoordinateY {0}; textureCoordinateY < textureSize; ++textureCoordinateY) {
 				const auto imageIndex {textureCoordinateX + textureCoordinateY * imageWidth};
-				const auto textureIndex {textureCoordinateX + textureId * textureSize + textureCoordinateY * textureSize * textureCount};
+				const auto textureIndex {
+						textureCoordinateX + textureId * textureSize + textureCoordinateY * textureSize * textureCount};
 				image[imageIndex] = wallTextures[textureIndex];
 			}
 		}
