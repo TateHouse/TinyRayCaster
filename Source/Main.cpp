@@ -10,26 +10,7 @@
 #include <sstream>
 #include <vector>
 
-unsigned int packColor(const std::byte red,
-                       const std::byte green,
-                       const std::byte blue,
-                       const std::byte alpha = std::byte {255}) {
-	return (static_cast<unsigned int>(red) << 0) +
-	       (static_cast<unsigned int>(green) << 8) +
-	       (static_cast<unsigned int>(blue) << 16) +
-	       (static_cast<unsigned int>(alpha) << 24);
-}
-
-void unpackColor(const unsigned int color,
-                 std::byte& red,
-                 std::byte& green,
-                 std::byte& blue,
-                 std::byte& alpha) {
-	red = static_cast<std::byte>((color >> 0) & 255);
-	green = static_cast<std::byte>((color >> 8) & 255);
-	blue = static_cast<std::byte>((color >> 16) & 255);
-	alpha = static_cast<std::byte>((color >> 24) & 255);
-}
+#include "Color.hpp"
 
 void writeImage(const std::filesystem::path& path,
                 const std::vector<unsigned int>& image,
@@ -42,11 +23,10 @@ void writeImage(const std::filesystem::path& path,
 	std::ofstream fileStream {path, std::ios::out | std::ios::binary};
 	fileStream << "P6\n" << imageWidth << " " << imageHeight << "\n255\n";
 	for (std::size_t pixelIndex {0}; pixelIndex < image.size(); ++pixelIndex) {
-		std::byte red {};
-		std::byte green {};
-		std::byte blue {};
-		std::byte alpha {};
-		unpackColor(image[pixelIndex], red, green, blue, alpha);
+		const TinyRayCaster::Color color {image[pixelIndex]};
+		const auto red {color.getRed()};
+		const auto green {color.getGreen()};
+		const auto blue {color.getBlue()};
 		fileStream << static_cast<char>(red) << static_cast<char>(green) << static_cast<char>(blue);
 	}
 	
@@ -114,7 +94,8 @@ void loadTexture(const std::filesystem::path& path,
 			const auto green {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 1])};
 			const auto blue {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 2])};
 			const auto alpha {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 3])};
-			texture[textureIndex] = packColor(red, green, blue, alpha);
+			const TinyRayCaster::Color color {red, green, blue, alpha};
+			texture[textureIndex] = color.getColor();
 		}
 	}
 	
@@ -153,7 +134,8 @@ std::vector<unsigned int> getTextureColumn(const std::vector<unsigned int>& imag
 			const auto red {static_cast<std::byte>(255 * (y / static_cast<float>(imageHeight)))};
 			const auto green {static_cast<std::byte>(255 * (x / static_cast<float>(imageWidth)))};
 			const std::byte blue {0};
-			image[y * imageWidth + x] = packColor(red, green, blue);
+			const TinyRayCaster::Color color {red, green, blue};
+			image[y * imageWidth + x] = color.getColor();
 		}
 	}
 }
@@ -162,8 +144,9 @@ int main(int argc, char* argv[]) {
 	const std::filesystem::path imagePath {"Output/Image.ppm"};
 	const auto imageWidth {1024u};
 	const auto imageHeight {512u};
-	std::vector<unsigned int> image(imageWidth * imageHeight,
-	                                packColor(std::byte {255}, std::byte {255}, std::byte {255}));
+	const TinyRayCaster::Color backgroundColor {std::byte {255}, std::byte {255}, std::byte {255}};
+	std::vector<unsigned int> image(imageWidth * imageHeight, backgroundColor.getColor());
+	const TinyRayCaster::Color rayColor {std::byte {150}, std::byte {150}, std::byte {150}};
 	const auto mapWidth {16u};
 	const auto mapHeight {16u};
 	constexpr std::array<char, (mapWidth * mapHeight) + 1> map {
@@ -216,8 +199,7 @@ int main(int argc, char* argv[]) {
 		const auto framePath {stringStream.str()};
 		playerViewAngle += static_cast<float>(2 * std::numbers::pi / 360);
 		
-		image = std::vector<unsigned int>(imageWidth * imageHeight,
-		                                  packColor(std::byte {255}, std::byte {255}, std::byte {255}));
+		image = std::vector<unsigned int>(imageWidth * imageHeight, backgroundColor.getColor());
 		
 		for (std::size_t yIndex {0}; yIndex < mapHeight; ++yIndex) {
 			for (std::size_t xIndex {0}; xIndex < mapWidth; ++xIndex) {
@@ -253,7 +235,7 @@ int main(int argc, char* argv[]) {
 				auto rayScreenX {static_cast<int>(rayX * rectangleWidth)};
 				auto rayScreenY {static_cast<int>(rayY * rectangleHeight)};
 				const auto imageIndex {static_cast<int>(rayScreenY * imageWidth + rayScreenX)};
-				image[imageIndex] = packColor(std::byte {160}, std::byte {160}, std::byte {160});
+				image[imageIndex] = rayColor.getColor();
 				
 				const auto mapIndex {static_cast<int>(rayY) * mapWidth + static_cast<int>(rayX)};
 				if (map[mapIndex] != ' ') {
