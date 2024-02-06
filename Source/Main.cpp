@@ -2,36 +2,14 @@
 
 #include <array>
 #include <cstddef>
-#include <fstream>
 #include <filesystem>
 #include <iostream>
 #include <numbers>
 #include <random>
-#include <sstream>
 #include <vector>
 
 #include "Color.hpp"
-
-void writeImage(const std::filesystem::path& path,
-                const std::vector<unsigned int>& image,
-                const unsigned int imageWidth,
-                const unsigned int imageHeight) {
-	if (image.size() != imageWidth * imageHeight) {
-		throw std::invalid_argument("Image size does not match width and height");
-	}
-	
-	std::ofstream fileStream {path, std::ios::out | std::ios::binary};
-	fileStream << "P6\n" << imageWidth << " " << imageHeight << "\n255\n";
-	for (std::size_t pixelIndex {0}; pixelIndex < image.size(); ++pixelIndex) {
-		const TinyRayCaster::Color color {image[pixelIndex]};
-		const auto red {color.getRed()};
-		const auto green {color.getGreen()};
-		const auto blue {color.getBlue()};
-		fileStream << static_cast<char>(red) << static_cast<char>(green) << static_cast<char>(blue);
-	}
-	
-	fileStream.close();
-}
+#include "Image.hpp"
 
 void drawRectangle(std::vector<unsigned int>& image,
                    const unsigned int imageWidth,
@@ -145,7 +123,7 @@ int main(int argc, char* argv[]) {
 	const auto imageWidth {1024u};
 	const auto imageHeight {512u};
 	const TinyRayCaster::Color backgroundColor {std::byte {255}, std::byte {255}, std::byte {255}};
-	std::vector<unsigned int> image(imageWidth * imageHeight, backgroundColor.getColor());
+	std::vector<unsigned int> pixels(imageWidth * imageHeight, backgroundColor.getColor());
 	const TinyRayCaster::Color rayColor {std::byte {150}, std::byte {150}, std::byte {150}};
 	const auto mapWidth {16u};
 	const auto mapHeight {16u};
@@ -199,7 +177,7 @@ int main(int argc, char* argv[]) {
 		const auto framePath {stringStream.str()};
 		playerViewAngle += static_cast<float>(2 * std::numbers::pi / 360);
 		
-		image = std::vector<unsigned int>(imageWidth * imageHeight, backgroundColor.getColor());
+		pixels = std::vector<unsigned int>(imageWidth * imageHeight, backgroundColor.getColor());
 		
 		for (std::size_t yIndex {0}; yIndex < mapHeight; ++yIndex) {
 			for (std::size_t xIndex {0}; xIndex < mapWidth; ++xIndex) {
@@ -212,7 +190,7 @@ int main(int argc, char* argv[]) {
 				const auto yPosition {static_cast<unsigned int>(yIndex * rectangleHeight)};
 				const auto textureId {map[mapIndex] - '0'};
 				const auto textureIndex {textureId * textureSize};
-				drawRectangle(image,
+				drawRectangle(pixels,
 				              imageWidth,
 				              imageHeight,
 				              xPosition,
@@ -234,8 +212,8 @@ int main(int argc, char* argv[]) {
 				const auto rayY {playerY + rayDistance * std::sin(rayAngle)};
 				auto rayScreenX {static_cast<int>(rayX * rectangleWidth)};
 				auto rayScreenY {static_cast<int>(rayY * rectangleHeight)};
-				const auto imageIndex {static_cast<int>(rayScreenY * imageWidth + rayScreenX)};
-				image[imageIndex] = rayColor.getColor();
+				auto pixelIndex {static_cast<int>(rayScreenY * imageWidth + rayScreenX)};
+				pixels[pixelIndex] = rayColor.getColor();
 				
 				const auto mapIndex {static_cast<int>(rayY) * mapWidth + static_cast<int>(rayX)};
 				if (map[mapIndex] != ' ') {
@@ -274,8 +252,8 @@ int main(int argc, char* argv[]) {
 							continue;
 						}
 						
-						const auto imageIndex {rayScreenY * imageWidth + rayScreenX};
-						image[imageIndex] = column[yIndex];
+						pixelIndex = static_cast<int>(rayScreenY * imageWidth + rayScreenX);
+						pixels[pixelIndex] = column[yIndex];
 					}
 					
 					break;
@@ -289,11 +267,12 @@ int main(int argc, char* argv[]) {
 				const auto imageIndex {textureCoordinateX + textureCoordinateY * imageWidth};
 				const auto textureIndex {
 						textureCoordinateX + textureId * textureSize + textureCoordinateY * textureSize * textureCount};
-				image[imageIndex] = wallTextures[textureIndex];
+				pixels[imageIndex] = wallTextures[textureIndex];
 			}
 		}
 		
-		writeImage(framePath, image, imageWidth, imageHeight);
+		TinyRayCaster::Image image {framePath, imageWidth, imageHeight};
+		image.write(pixels);
 	}
 	
 	return 0;
