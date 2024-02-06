@@ -2,7 +2,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION ${CMAKE_MINIMUM_REQUIRED_VERSION})
 
 SET(SOURCE_FILES
 		Color.cpp
+		FrameBuffer.cpp
 		Image.cpp
+		Map.cpp
 		STBImage.cpp
 		TextureAtlas.cpp)
 
