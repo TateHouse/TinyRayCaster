@@ -121,6 +121,30 @@ void loadTexture(const std::filesystem::path& path,
 	stbi_image_free(pixelMap);
 }
 
+std::vector<unsigned int> getTextureColumn(const std::vector<unsigned int>& image,
+                                           const unsigned int textureSize,
+                                           const unsigned int textureCount,
+                                           const unsigned int textureId,
+                                           const unsigned int textureCoordinateX,
+                                           const unsigned int columnHeight) {
+	const auto textureAtlasWidth {textureSize * textureCount};
+	const auto textureAtlasHeight {textureSize};
+	
+	if (image.size() != textureAtlasWidth * textureAtlasHeight) {
+		throw std::invalid_argument("Image size does not match texture atlas width and height");
+	}
+	
+	std::vector<unsigned int> column(columnHeight);
+	for (std::size_t textureCoordinateY {0}; textureCoordinateY < columnHeight; ++textureCoordinateY) {
+		const auto pixelX {textureId * textureSize + textureCoordinateX};
+		const auto pixelY {(textureCoordinateY * textureAtlasHeight) / columnHeight};
+		const auto imageIndex {pixelY * textureAtlasWidth + pixelX};
+		column[textureCoordinateY] = image[imageIndex];
+	}
+	
+	return column;
+}
+
 [[maybe_unused]] void drawGradientBackground(const unsigned int imageWidth,
                                              const unsigned int imageHeight,
                                              std::vector<unsigned int>& image) {
@@ -226,8 +250,8 @@ int main(int argc, char* argv[]) {
 			for (auto rayDistance {0.0f}; rayDistance < maxRayDistance; rayDistance += 0.01f) {
 				const auto rayX {playerX + rayDistance * std::cos(rayAngle)};
 				const auto rayY {playerY + rayDistance * std::sin(rayAngle)};
-				const auto rayScreenX {static_cast<unsigned int>(rayX * rectangleWidth)};
-				const auto rayScreenY {static_cast<unsigned int>(rayY * rectangleHeight)};
+				auto rayScreenX {static_cast<int>(rayX * rectangleWidth)};
+				auto rayScreenY {static_cast<int>(rayY * rectangleHeight)};
 				const auto imageIndex {static_cast<int>(rayScreenY * imageWidth + rayScreenX)};
 				image[imageIndex] = packColor(std::byte {160}, std::byte {160}, std::byte {160});
 				
@@ -237,15 +261,41 @@ int main(int argc, char* argv[]) {
 					                                                   (rayDistance *
 					                                                    std::cos(rayAngle - playerViewAngle)))};
 					const auto textureId {map[mapIndex] - '0'};
-					const auto textureIndex {textureId * textureSize};
-					drawRectangle(image,
-					              imageWidth,
-					              imageHeight,
-					              (imageWidth / 2) + index,
-					              (imageHeight / 2) - (columnHeight / 2),
-					              1,
-					              columnHeight,
-					              wallTextures[textureIndex]);
+					
+					auto hitX {rayX - std::floor(rayX + 0.5f)};
+					auto hitY {rayY - std::floor(rayY + 0.5f)};
+					auto textureCoordinateX {static_cast<int>(hitX * textureSize)};
+					
+					if (std::fabs(hitY) > std::fabs(hitX)) {
+						textureCoordinateX = static_cast<int>(hitY * textureSize);
+					}
+					
+					if (textureCoordinateX < 0) {
+						textureCoordinateX += textureSize;
+					}
+					
+					if (textureCoordinateX < 0 && textureCoordinateX < textureSize) {
+						throw std::runtime_error("Texture coordinate X is out of bounds");
+					}
+					
+					const auto column {getTextureColumn(wallTextures,
+					                                    textureSize,
+					                                    textureCount,
+					                                    textureId,
+					                                    textureCoordinateX,
+					                                    columnHeight)};
+					rayScreenX = static_cast<int>((imageWidth / 2) + index);
+					
+					for (std::size_t yIndex {0}; yIndex < columnHeight; ++yIndex) {
+						rayScreenY = (imageHeight / 2) - (columnHeight / 2) + yIndex;
+						if (rayScreenY < 0 || rayScreenY >= imageHeight) {
+							continue;
+						}
+						
+						const auto imageIndex {rayScreenY * imageWidth + rayScreenX};
+						image[imageIndex] = column[yIndex];
+					}
+					
 					break;
 				}
 			}
