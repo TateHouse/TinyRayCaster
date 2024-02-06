@@ -181,7 +181,9 @@ int main(int argc, char* argv[]) {
 				
 				const auto mapIndex {static_cast<int>(rayY) * mapWidth + static_cast<int>(rayX)};
 				if (map[mapIndex] != ' ') {
-					const auto columnHeight {static_cast<unsigned int>(imageHeight / rayDistance)};
+					const auto columnHeight {static_cast<unsigned int>(imageHeight /
+					                                                   (rayDistance *
+					                                                    std::cos(rayAngle - playerViewAngle)))};
 					const auto colorIndex {map[mapIndex] - '0'};
 					drawRectangle(image,
 					              imageWidth,
