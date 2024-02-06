@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <numbers>
 #include <random>
 #include <vector>
 
 #include "Color.hpp"
 #include "Image.hpp"
+#include "TextureAtlas.hpp"
 
 void drawRectangle(std::vector<unsigned int>& image,
                    const unsigned int imageWidth,
@@ -36,72 +38,6 @@ void drawRectangle(std::vector<unsigned int>& image,
 			image[pixelIndex] = color;
 		}
 	}
-}
-
-void loadTexture(const std::filesystem::path& path,
-                 std::vector<unsigned int>& texture,
-                 unsigned int& textureSize,
-                 unsigned int& textureCount) {
-	auto channelCount {-1};
-	auto width {0};
-	auto height {0};
-	auto* pixelMap {stbi_load(path.string().c_str(), &width, &height, &channelCount, 0)};
-	
-	if (!pixelMap) {
-		throw std::invalid_argument {"Failed to load texture"};
-	}
-	
-	constexpr auto expectedChannelCount {4};
-	if (channelCount != expectedChannelCount) {
-		stbi_image_free(pixelMap);
-		throw std::invalid_argument {"Texture must have 4 channels"};
-	}
-	
-	textureCount = width / height;
-	textureSize = width / textureCount;
-	if (width != height * textureCount) {
-		stbi_image_free(pixelMap);
-		throw std::invalid_argument {"Texture file must contain N square textures packed horizontally"};
-	}
-	
-	texture = std::vector<unsigned int>(width * height);
-	for (std::size_t rowIndex {0}; rowIndex < height; ++rowIndex) {
-		for (std::size_t columnIndex {0}; columnIndex < width; ++columnIndex) {
-			const auto textureIndex {rowIndex * width + columnIndex};
-			const auto red {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 0])};
-			const auto green {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 1])};
-			const auto blue {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 2])};
-			const auto alpha {static_cast<std::byte>(pixelMap[textureIndex * expectedChannelCount + 3])};
-			const TinyRayCaster::Color color {red, green, blue, alpha};
-			texture[textureIndex] = color.getColor();
-		}
-	}
-	
-	stbi_image_free(pixelMap);
-}
-
-std::vector<unsigned int> getTextureColumn(const std::vector<unsigned int>& image,
-                                           const unsigned int textureSize,
-                                           const unsigned int textureCount,
-                                           const unsigned int textureId,
-                                           const unsigned int textureCoordinateX,
-                                           const unsigned int columnHeight) {
-	const auto textureAtlasWidth {textureSize * textureCount};
-	const auto textureAtlasHeight {textureSize};
-	
-	if (image.size() != textureAtlasWidth * textureAtlasHeight) {
-		throw std::invalid_argument("Image size does not match texture atlas width and height");
-	}
-	
-	std::vector<unsigned int> column(columnHeight);
-	for (std::size_t textureCoordinateY {0}; textureCoordinateY < columnHeight; ++textureCoordinateY) {
-		const auto pixelX {textureId * textureSize + textureCoordinateX};
-		const auto pixelY {(textureCoordinateY * textureAtlasHeight) / columnHeight};
-		const auto imageIndex {pixelY * textureAtlasWidth + pixelX};
-		column[textureCoordinateY] = image[imageIndex];
-	}
-	
-	return column;
 }
 
 [[maybe_unused]] void drawGradientBackground(const unsigned int imageWidth,
@@ -152,21 +88,11 @@ int main(int argc, char* argv[]) {
 	const auto playerFOV {static_cast<float>(std::numbers::pi) / 3.0f};
 	const auto rectangleWidth {imageWidth / (mapWidth * 2)};
 	const auto rectangleHeight {imageHeight / mapHeight};
-	std::random_device randomDevice;
-	std::mt19937 randomEngine(randomDevice());
 	
-	std::vector<unsigned int> wallTextures {};
-	unsigned int textureSize {};
-	unsigned int textureCount {};
+	std::unique_ptr<TinyRayCaster::TextureAtlas> wallTextureAtlas {};
 	try {
-		loadTexture(std::filesystem::path {"Resources/Textures/WallTextures.png"},
-		            wallTextures,
-		            textureSize,
-		            textureCount);
-	} catch (const std::invalid_argument& exception) {
-		std::cerr << exception.what() << std::endl;
-		return -1;
-	} catch (const std::filesystem::filesystem_error& exception) {
+		wallTextureAtlas = std::make_unique<TinyRayCaster::TextureAtlas>("Resources/Textures/WallTextureAtlas.png");
+	} catch (const std::exception& exception) {
 		std::cerr << exception.what() << std::endl;
 		return -1;
 	}
@@ -189,7 +115,7 @@ int main(int argc, char* argv[]) {
 				const auto xPosition {static_cast<unsigned int>(xIndex * rectangleWidth)};
 				const auto yPosition {static_cast<unsigned int>(yIndex * rectangleHeight)};
 				const auto textureId {map[mapIndex] - '0'};
-				const auto textureIndex {textureId * textureSize};
+				const auto textureIndex {textureId * wallTextureAtlas->getTextureSize()};
 				drawRectangle(pixels,
 				              imageWidth,
 				              imageHeight,
@@ -197,7 +123,7 @@ int main(int argc, char* argv[]) {
 				              yPosition,
 				              rectangleWidth,
 				              rectangleHeight,
-				              wallTextures[textureIndex]);
+				              wallTextureAtlas->getPixel(textureIndex, 0, 0));
 			}
 		}
 		
@@ -224,26 +150,21 @@ int main(int argc, char* argv[]) {
 					
 					auto hitX {rayX - std::floor(rayX + 0.5f)};
 					auto hitY {rayY - std::floor(rayY + 0.5f)};
-					auto textureCoordinateX {static_cast<int>(hitX * textureSize)};
+					auto textureCoordinateX {static_cast<int>(hitX * wallTextureAtlas->getTextureSize())};
 					
 					if (std::fabs(hitY) > std::fabs(hitX)) {
-						textureCoordinateX = static_cast<int>(hitY * textureSize);
+						textureCoordinateX = static_cast<int>(hitY * wallTextureAtlas->getTextureSize());
 					}
 					
 					if (textureCoordinateX < 0) {
-						textureCoordinateX += textureSize;
+						textureCoordinateX += wallTextureAtlas->getTextureSize();
 					}
 					
-					if (textureCoordinateX < 0 && textureCoordinateX < textureSize) {
-						throw std::runtime_error("Texture coordinate X is out of bounds");
+					if (textureCoordinateX < 0 && textureCoordinateX < wallTextureAtlas->getTextureSize()) {
+						throw std::runtime_error("TextureAtlas coordinate X is out of bounds");
 					}
 					
-					const auto column {getTextureColumn(wallTextures,
-					                                    textureSize,
-					                                    textureCount,
-					                                    textureId,
-					                                    textureCoordinateX,
-					                                    columnHeight)};
+					const auto column {wallTextureAtlas->getPixelColumn(textureId, textureCoordinateX, columnHeight)};
 					rayScreenX = static_cast<int>((imageWidth / 2) + index);
 					
 					for (std::size_t yIndex {0}; yIndex < columnHeight; ++yIndex) {
@@ -258,16 +179,6 @@ int main(int argc, char* argv[]) {
 					
 					break;
 				}
-			}
-		}
-		
-		const auto textureId {2};
-		for (std::size_t textureCoordinateX {0}; textureCoordinateX < textureSize; ++textureCoordinateX) {
-			for (std::size_t textureCoordinateY {0}; textureCoordinateY < textureSize; ++textureCoordinateY) {
-				const auto imageIndex {textureCoordinateX + textureCoordinateY * imageWidth};
-				const auto textureIndex {
-						textureCoordinateX + textureId * textureSize + textureCoordinateY * textureSize * textureCount};
-				pixels[imageIndex] = wallTextures[textureIndex];
 			}
 		}
 		
