@@ -6,11 +6,9 @@
 namespace TinyRayCaster {
 
 void Application::run() {
-	const TextureAtlas monsterTextureAtlas {"Resources/Textures/MonsterTextureAtlas.png"};
 	sprites.emplace_back(1.834f, 8.765f, 0);
 	sprites.emplace_back(5.323f, 5.365f, 1);
 	sprites.emplace_back(4.123f, 10.265f, 2);
-	sprites.emplace_back(3.113f, 2.03f, 3);
 	
 	update(0);
 }
@@ -75,6 +73,7 @@ void Application::render(const Color& rayColor) {
 		for (std::size_t spriteIndex {0}; spriteIndex < sprites.size(); ++spriteIndex) {
 			const auto& sprite {sprites[spriteIndex]};
 			drawMapSprite(sprite);
+			drawSprite(sprites[spriteIndex], monsterTextureAtlas);
 		}
 	}
 }
@@ -110,6 +109,45 @@ void Application::drawMapSprite(const TinyRayCaster::Sprite& sprite) {
 	constexpr auto spriteHeight {6};
 	const Color spriteColor {std::byte {255}, std::byte {0}, std::byte {0}};
 	frameBuffer.drawRectangle(spriteX, spriteY, spriteWidth, spriteHeight, spriteColor);
+}
+
+void Application::drawSprite(const TinyRayCaster::Sprite& sprite, const TinyRayCaster::TextureAtlas& textureAtlas) {
+	auto spriteAngle {std::atan2(sprite.getYPosition() - player.getYPosition(),
+	                             sprite.getXPosition() - player.getXPosition())};
+	while (spriteAngle - player.getViewAngle() > std::numbers::pi) {
+		spriteAngle -= 2 * std::numbers::pi;
+	}
+	
+	while (spriteAngle - player.getViewAngle() < -std::numbers::pi) {
+		spriteAngle += 2 * std::numbers::pi;
+	}
+	
+	const auto spriteDistance {std::sqrt(std::pow(player.getXPosition() - sprite.getXPosition(), 2) +
+	                                     std::pow(player.getYPosition() - sprite.getYPosition(), 2))};
+	const auto spriteScreenSize {
+			static_cast<unsigned int>(std::min(1000, static_cast<int>(frameBuffer.getHeight() / spriteDistance)))};
+	const auto horizontalOffset {
+			(spriteAngle - player.getViewAngle()) /
+			player.getFieldOfView() * (frameBuffer.getWidth() / 2) +
+			(frameBuffer.getWidth() / 2) / 2 - textureAtlas.getTextureSize() / 2};
+	const auto verticalOffset {frameBuffer.getHeight() / 2 - spriteScreenSize / 2};
+	
+	for (std::size_t xIndex {0}; xIndex < spriteScreenSize; ++xIndex) {
+		if (horizontalOffset + xIndex < 0 || horizontalOffset + xIndex >= frameBuffer.getWidth() / 2) {
+			continue;
+		}
+		
+		for (std::size_t yIndex {0}; yIndex < spriteScreenSize; ++yIndex) {
+			if (verticalOffset + yIndex < 0 || verticalOffset + yIndex >= frameBuffer.getHeight()) {
+				continue;
+			}
+			
+			const auto screenX {static_cast<unsigned int>(frameBuffer.getWidth() / 2 + horizontalOffset + xIndex)};
+			const auto screenY {static_cast<unsigned int>(verticalOffset + yIndex)};
+			const Color pixelColor {std::byte {0}, std::byte {0}, std::byte {0}};
+			frameBuffer.setPixel(screenX, screenY, pixelColor);
+		}
+	}
 }
 
 float Application::getRayAngle(size_t index) const {
