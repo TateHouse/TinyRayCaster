@@ -6,6 +6,7 @@
 #include "FrameBuffer.hpp"
 #include "Map.hpp"
 #include "Player.hpp"
+#include "Sprite.hpp"
 #include "TextureAtlas.hpp"
 
 namespace TinyRayCaster {
@@ -17,6 +18,7 @@ private:
 	void update(const unsigned int frameIndex);
 	void render(const Color& rayColor);
 	void drawMap(unsigned int rectangleWidth, unsigned int rectangleHeight);
+	void drawMapSprite(const Sprite& sprite);
 	[[nodiscard]] float getRayAngle(size_t index) const;
 	[[nodiscard]] int getTextureCoordinateX(const float hitX, const float hitY) const;
 
@@ -27,5 +29,6 @@ private:
 	Map map {};
 	TextureAtlas wallTextureAtlas {"Resources/Textures/WallTextureAtlas.png"};
 	FrameBuffer frameBuffer {imageWidth, imageHeight, Color {std::byte {255}, std::byte {255}, std::byte {255}}};
+	std::vector<Sprite> sprites {};
 };
 }

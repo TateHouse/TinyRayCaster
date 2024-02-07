@@ -6,16 +6,18 @@
 namespace TinyRayCaster {
 
 void Application::run() {
-	constexpr auto frameCount {360u};
-	for (auto frameIndex {0u}; frameIndex < frameCount; ++frameIndex) {
-		update(frameIndex);
-	}
+	const TextureAtlas monsterTextureAtlas {"Resources/Textures/MonsterTextureAtlas.png"};
+	sprites.emplace_back(1.834f, 8.765f, 0);
+	sprites.emplace_back(5.323f, 5.365f, 1);
+	sprites.emplace_back(4.123f, 10.265f, 2);
+	sprites.emplace_back(3.113f, 2.03f, 3);
+	
+	update(0);
 }
 
 void Application::update(const unsigned int frameIndex) {
 	std::stringstream frameNameStream {};
 	frameNameStream << "Output/Frame" << std::setfill('0') << std::setw(5) << frameIndex << ".ppm";
-	player.rotate(static_cast<float>(2 * std::numbers::pi) / 360.0f);
 	const Color rayColor {std::byte {160}, std::byte {160}, std::byte {160}};
 	render(rayColor);
 	Image image {frameNameStream.str(), frameBuffer.getWidth(), frameBuffer.getHeight()};
@@ -44,20 +46,17 @@ void Application::render(const Color& rayColor) {
 			frameBuffer.setPixel(rayScreenX, rayScreenY, rayColor);
 			
 			if (!map.isCellEmpty(static_cast<unsigned int>(rayX), static_cast<unsigned int>(rayY))) {
-				const auto columnHeight {static_cast<unsigned int>(imageHeight /
-				                                                   (rayDistance *
-				                                                    std::cos(rayAngle - player.getViewAngle())))};
+				const auto distanceToWall {rayDistance * std::cos(rayAngle - player.getViewAngle())};
+				const auto columnHeight {static_cast<unsigned int>(frameBuffer.getHeight() / distanceToWall)};
 				const auto textureId {map.getCell(static_cast<int>(rayX),
 				                                  static_cast<int>(rayY))};
 				
-				auto hitX {rayX - std::floor(rayX + 0.5f)};
-				auto hitY {rayY - std::floor(rayY + 0.5f)};
-				const auto textureCoordinateX {getTextureCoordinateX(hitX, hitY)};
+				const auto textureCoordinateX {getTextureCoordinateX(rayX, rayY)};
 				const auto column {wallTextureAtlas.getPixelColumn(textureId, textureCoordinateX, columnHeight)};
 				rayScreenX = static_cast<int>((imageWidth / 2) + index);
 				
 				for (std::size_t yIndex {0}; yIndex < columnHeight; ++yIndex) {
-					rayScreenY = (imageHeight / 2) - (columnHeight / 2) + yIndex;
+					rayScreenY = yIndex + frameBuffer.getHeight() / 2 - columnHeight / 2;
 					
 					if (rayScreenY < 0 || rayScreenY >= imageHeight) {
 						continue;
@@ -71,6 +70,11 @@ void Application::render(const Color& rayColor) {
 			}
 			
 			rayDistance += rayStepSize;
+		}
+		
+		for (std::size_t spriteIndex {0}; spriteIndex < sprites.size(); ++spriteIndex) {
+			const auto& sprite {sprites[spriteIndex]};
+			drawMapSprite(sprite);
 		}
 	}
 }
@@ -97,6 +101,17 @@ void Application::drawMap(unsigned int rectangleWidth, unsigned int rectangleHei
 	}
 }
 
+void Application::drawMapSprite(const TinyRayCaster::Sprite& sprite) {
+	const auto rectangleWidth {frameBuffer.getWidth() / (map.getWidth() * 2)};
+	const auto rectangleHeight {frameBuffer.getHeight() / map.getHeight()};
+	const auto spriteX {static_cast<int>(sprite.getXPosition() * rectangleWidth - 3)};
+	const auto spriteY {static_cast<int>(sprite.getYPosition() * rectangleHeight - 3)};
+	constexpr auto spriteWidth {6};
+	constexpr auto spriteHeight {6};
+	const Color spriteColor {std::byte {255}, std::byte {0}, std::byte {0}};
+	frameBuffer.drawRectangle(spriteX, spriteY, spriteWidth, spriteHeight, spriteColor);
+}
+
 float Application::getRayAngle(size_t index) const {
 	const auto startingAngle {player.getViewAngle() - player.getFieldOfView() / 2.0f};
 	const auto rayIndexNormalized {static_cast<float>(index) / static_cast<float>(imageWidth / 2)};
@@ -105,18 +120,20 @@ float Application::getRayAngle(size_t index) const {
 }
 
 int Application::getTextureCoordinateX(const float hitX, const float hitY) const {
-	auto textureCoordinateX {static_cast<int>(hitX * wallTextureAtlas.getTextureSize())};
+	const auto x {hitX - std::floor(hitX + 0.5f)};
+	const auto y {hitY - std::floor(hitY + 0.5f)};
+	auto textureCoordinateX {static_cast<int>(x * wallTextureAtlas.getTextureSize())};
 	
-	if (std::fabs(hitY) > std::fabs(hitX)) {
-		textureCoordinateX = static_cast<int>(hitY * wallTextureAtlas.getTextureSize());
+	if (std::fabs(y) > std::fabs(x)) {
+		textureCoordinateX = y * wallTextureAtlas.getTextureSize();
 	}
 	
 	if (textureCoordinateX < 0) {
 		textureCoordinateX += wallTextureAtlas.getTextureSize();
 	}
 	
-	if (textureCoordinateX < 0 && textureCoordinateX < wallTextureAtlas.getTextureSize()) {
-		throw std::runtime_error("TextureAtlas coordinate X is out of bounds");
+	if (textureCoordinateX < 0 || textureCoordinateX >= wallTextureAtlas.getTextureSize()) {
+		throw std::out_of_range {"TextureAtlas coordinates out of range."};
 	}
 	
 	return textureCoordinateX;

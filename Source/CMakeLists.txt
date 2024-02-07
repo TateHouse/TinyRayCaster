@@ -7,6 +7,7 @@ SET(SOURCE_FILES
 		Image.cpp
 		Map.cpp
 		Player.cpp
+		Sprite.cpp
 		STBImage.cpp
 		TextureAtlas.cpp)
 

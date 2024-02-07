@@ -7,6 +7,7 @@ SET(HEADER_FILES
 		Image.hpp
 		Map.hpp
 		Player.hpp
+		Sprite.hpp
 		STBImage.hpp
 		TextureAtlas.hpp)
 
