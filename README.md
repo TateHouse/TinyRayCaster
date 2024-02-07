@@ -1,4 +1,4 @@
-# Tiny Ray Caster <img src="Resources/Logo.png" alt="Monster Logo" width="256" height="256" align="right"/>
+# Tiny Ray Caster 
 
 ## Overview
 
