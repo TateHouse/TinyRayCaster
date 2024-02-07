@@ -1,4 +1,4 @@
-# Tiny Ray Caster <img src="Resources/Logo.png" alt="Logo" width="256" height="256" align="right"/>
+# Tiny Ray Caster <img src="Resources/Logo.png" alt="Monster Logo" width="256" height="256" align="right"/>
 
 ## Overview
 
@@ -9,7 +9,8 @@ casting, I highly recommend checking out his repository. There are some great ex
 The only dependency used was the [stb_image](https://github.com/nothings/stb) single header file for image loading.
 
 I created the monster sprites and wall textures in `Adobe Photoshop` and combined individually rendered frames into
-videos using `FFmpeg`.
+videos using `FFmpeg`. The videos can be found in the `Resources/Videos` directory and are also displayed below. One
+includes monsters and the other does not.
 
 ## Videos
 
