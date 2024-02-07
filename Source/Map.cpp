@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 namespace TinyRayCaster {
-unsigned int Map::getCell(const unsigned int x, const unsigned int y) const {
+int Map::getCell(const unsigned int x, const unsigned int y) const {
 	if (x >= width || y >= height) {
 		throw std::out_of_range("Map cell out of range.");
 	}
@@ -12,7 +12,7 @@ unsigned int Map::getCell(const unsigned int x, const unsigned int y) const {
 	return map[mapIndex] - '0';
 }
 
-bool Map::isEmptyCell(const unsigned int x, const unsigned int y) const {
+bool Map::isCellEmpty(const unsigned int x, const unsigned int y) const {
 	if (x >= width || y >= height) {
 		throw std::out_of_range("Map cell out of range.");
 	}

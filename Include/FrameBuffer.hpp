@@ -24,6 +24,9 @@ public:
 	                   const unsigned int rectangleWidth,
 	                   const unsigned int rectangleHeight,
 	                   const Color& color);
+	[[nodiscard]] unsigned int getWidth() const;
+	[[nodiscard]] unsigned int getHeight() const;
+	[[nodiscard]] const std::vector<unsigned int>& getPixels() const;
 
 private:
 	unsigned int width;

@@ -6,6 +6,7 @@ SET(HEADER_FILES
 		FrameBuffer.hpp
 		Image.hpp
 		Map.hpp
+		Player.hpp
 		STBImage.hpp
 		TextureAtlas.hpp)
 

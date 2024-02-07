@@ -48,4 +48,16 @@ void FrameBuffer::drawRectangle(const unsigned int x,
 		}
 	}
 }
+
+unsigned int FrameBuffer::getWidth() const {
+	return width;
+}
+
+unsigned int FrameBuffer::getHeight() const {
+	return height;
+}
+
+const std::vector<unsigned int>& FrameBuffer::getPixels() const {
+	return pixels;
+}
 }
