@@ -1,14 +1,17 @@
 #include "Application.hpp"
 
+#include <algorithm>
+
 #include "Color.hpp"
 #include "Image.hpp"
 
 namespace TinyRayCaster {
 
 void Application::run() {
-	sprites.emplace_back(1.834f, 8.765f, 0);
-	sprites.emplace_back(5.323f, 5.365f, 1);
-	sprites.emplace_back(4.123f, 10.265f, 2);
+	sprites.emplace_back(3.523f, 3.812f, 0);
+	sprites.emplace_back(1.834f, 8.765f, 1);
+	sprites.emplace_back(5.323f, 5.365f, 2);
+	sprites.emplace_back(4.123f, 10.265f, 3);
 	
 	update(0);
 }
@@ -73,8 +76,16 @@ void Application::render(const Color& rayColor) {
 		}
 		
 		for (std::size_t spriteIndex {0}; spriteIndex < sprites.size(); ++spriteIndex) {
-			const auto& sprite {sprites[spriteIndex]};
-			drawMapSprite(sprite);
+			const auto playerDistance {std::sqrt(
+					std::pow(player.getXPosition() - sprites[spriteIndex].getXPosition(), 2) +
+					std::pow(player.getYPosition() - sprites[spriteIndex].getYPosition(), 2))};
+			sprites[spriteIndex].setPlayerDistance(playerDistance);
+		}
+		
+		std::sort(sprites.begin(), sprites.end());
+		
+		for (std::size_t spriteIndex {0}; spriteIndex < sprites.size(); ++spriteIndex) {
+			drawMapSprite(sprites[spriteIndex]);
 			drawSprite(sprites[spriteIndex], monsterTextureAtlas);
 		}
 	}
@@ -124,10 +135,8 @@ void Application::drawSprite(const TinyRayCaster::Sprite& sprite, const TinyRayC
 		spriteAngle += 2 * std::numbers::pi;
 	}
 	
-	const auto spriteDistance {std::sqrt(std::pow(player.getXPosition() - sprite.getXPosition(), 2) +
-	                                     std::pow(player.getYPosition() - sprite.getYPosition(), 2))};
-	const auto spriteScreenSize {
-			static_cast<unsigned int>(std::min(1000, static_cast<int>(frameBuffer.getHeight() / spriteDistance)))};
+	const auto spriteScreenSize {std::min(1000,
+	                                      static_cast<int>(frameBuffer.getHeight() / sprite.getPlayerDistance()))};
 	const auto horizontalOffset {
 			(spriteAngle - player.getViewAngle()) /
 			player.getFieldOfView() * (frameBuffer.getWidth() / 2) +
@@ -139,7 +148,7 @@ void Application::drawSprite(const TinyRayCaster::Sprite& sprite, const TinyRayC
 			continue;
 		}
 		
-		if (depthBuffer[horizontalOffset + xIndex] < spriteDistance) {
+		if (depthBuffer[horizontalOffset + xIndex] < sprite.getPlayerDistance()) {
 			continue;
 		}
 		
