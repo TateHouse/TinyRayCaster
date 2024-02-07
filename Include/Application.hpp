@@ -32,5 +32,6 @@ private:
 	TextureAtlas monsterTextureAtlas {"Resources/Textures/MonsterTextureAtlas.png"};
 	FrameBuffer frameBuffer {imageWidth, imageHeight, Color {std::byte {255}, std::byte {255}, std::byte {255}}};
 	std::vector<Sprite> sprites {};
+	std::vector<float> depthBuffer {};
 };
 }

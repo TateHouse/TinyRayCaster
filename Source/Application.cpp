@@ -29,6 +29,7 @@ void Application::render(const Color& rayColor) {
 	const auto rectangleHeight {frameBuffer.getHeight() / map.getHeight()};
 	
 	drawMap(rectangleWidth, rectangleHeight);
+	depthBuffer = std::vector<float>(frameBuffer.getWidth() / 2, 1000.0f);
 	
 	for (std::size_t index {0}; index < imageWidth / 2; ++index) {
 		const auto rayAngle {getRayAngle(index)};
@@ -45,6 +46,7 @@ void Application::render(const Color& rayColor) {
 			
 			if (!map.isCellEmpty(static_cast<unsigned int>(rayX), static_cast<unsigned int>(rayY))) {
 				const auto distanceToWall {rayDistance * std::cos(rayAngle - player.getViewAngle())};
+				depthBuffer[index] = distanceToWall;
 				const auto columnHeight {static_cast<unsigned int>(frameBuffer.getHeight() / distanceToWall)};
 				const auto textureId {map.getCell(static_cast<int>(rayX),
 				                                  static_cast<int>(rayY))};
@@ -137,15 +139,23 @@ void Application::drawSprite(const TinyRayCaster::Sprite& sprite, const TinyRayC
 			continue;
 		}
 		
+		if (depthBuffer[horizontalOffset + xIndex] < spriteDistance) {
+			continue;
+		}
+		
 		for (std::size_t yIndex {0}; yIndex < spriteScreenSize; ++yIndex) {
 			if (verticalOffset + yIndex < 0 || verticalOffset + yIndex >= frameBuffer.getHeight()) {
 				continue;
 			}
 			
-			const auto screenX {static_cast<unsigned int>(frameBuffer.getWidth() / 2 + horizontalOffset + xIndex)};
-			const auto screenY {static_cast<unsigned int>(verticalOffset + yIndex)};
-			const Color pixelColor {std::byte {0}, std::byte {0}, std::byte {0}};
-			frameBuffer.setPixel(screenX, screenY, pixelColor);
+			const Color color {textureAtlas.getPixel(xIndex * textureAtlas.getTextureSize() / spriteScreenSize,
+			                                         yIndex * textureAtlas.getTextureSize() / spriteScreenSize,
+			                                         sprite.getTextureId())};
+			if (static_cast<unsigned char>(color.getAlpha()) > 128) {
+				const auto pixelX {frameBuffer.getWidth() / 2 + horizontalOffset + xIndex};
+				const auto pixelY {verticalOffset + yIndex};
+				frameBuffer.setPixel(pixelX, pixelY, color);
+			}
 		}
 	}
 }
